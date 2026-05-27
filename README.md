@@ -41,9 +41,8 @@
 
 ### 第一步：克隆代码仓库
 ```bash
-git clone [https://github.com/你的用户名/Voice-Transcription-Breaker.git](https://github.com/你的用户名/Voice-Transcription-Breaker.git)
+git clone [https://github.com/sysw334659535-sketch/Voice-Transcription-Breaker.git](https://github.com/sysw334659535-sketch/Voice-Transcription-Breaker.git)
 cd Voice-Transcription-Breaker
-(注意：请将链接中的 你的用户名 替换为你真实的 GitHub 用户名)
 
 第二步：安装依赖包
 建议使用虚拟环境（venv 或 conda）。在终端中运行以下命令安装核心依赖：
