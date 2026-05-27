@@ -38,20 +38,25 @@
 ---
 
 ## 🚀 安装与运行
-### 第一步：克隆代码仓库
 
+### 第一步：克隆代码仓库
+```bash
 git clone [https://github.com/你的用户名/Voice-Transcription-Breaker.git](https://github.com/你的用户名/Voice-Transcription-Breaker.git)
 cd Voice-Transcription-Breaker
+(注意：请将链接中的 你的用户名 替换为你真实的 GitHub 用户名)
 
 第二步：安装依赖包
 建议使用虚拟环境（venv 或 conda）。在终端中运行以下命令安装核心依赖：
 
+Bash
+
+
 pip install -r requirements.txt
-(核心依赖包含 torch, transformers, accelerate 等)
-
 第三步：启动程序
-python main.py
+Bash
 
+
+python main.py
 📖 使用指南
 加载模型：打开软件后，在底部“模型路径”处点击【浏览...】选择你提前下载好的 DeepSeek 本地模型文件夹，然后点击【加载模型】。首次加载需等待几十秒至一分钟。
 
@@ -71,6 +76,10 @@ python main.py
 如果你希望将该工具发送给不懂代码的同事直接双击使用，可以通过 PyInstaller 将其打包为 .exe 可执行文件。本代码已内置了对打包环境（sys._MEIPASS）的兼容支持。
 
 在项目根目录下执行以下命令：
+
+Bash
+
+
 pip install pyinstaller
 pyinstaller --noconfirm --onedir --windowed --icon "logo.ico" --add-data "logo.ico;." main.py
 提示：为避免打包后的程序体积过大（模型通常有数 GB），上述命令仅打包了代码和 UI。请将打包生成的文件夹和你的模型文件夹一起发给同事，并让他们在软件中手动选择一次模型路径即可。
