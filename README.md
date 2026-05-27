@@ -1,4 +1,4 @@
-# 🎙️ Voice-Transcription-Breaker (同期声智能断句工具)
+# 🎙️ Voice-Transcription-Breaker (同期声智能断句工具)【README施工中】
 
 ![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
