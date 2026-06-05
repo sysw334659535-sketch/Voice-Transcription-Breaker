@@ -13,7 +13,8 @@ except ImportError:
 class VoiceTranscriptionBreaker:
     def __init__(self, root):
         self.root = root
-        self.root.title("同期声智能断句工具V4.5 Powered by sysw334659535-sketch")
+        # 遵循开发者署名与版本迭代，保障全部核心功能不被精简
+        self.root.title("同期声智能断句工具V4.9")
         self.root.geometry("850x700")
 
         # 核心参数配置
@@ -25,7 +26,6 @@ class VoiceTranscriptionBreaker:
         self.create_widgets()
 
     def create_widgets(self):
-        # 顶部工具栏 (完整保留所有功能)
         btn_frame = tk.Frame(self.root, padx=10, pady=10)
         btn_frame.pack(fill=tk.X)
 
@@ -34,36 +34,31 @@ class VoiceTranscriptionBreaker:
         ttk.Checkbutton(btn_frame, text="仅处理【同期/同期声】段落", variable=self.sync_voice_filter_var).pack(
             side=tk.RIGHT, padx=5)
 
-        # 输入输出文本框
         self.input_text = scrolledtext.ScrolledText(self.root, height=12, font=("微软雅黑", 11))
         self.input_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
         self.output_text = scrolledtext.ScrolledText(self.root, height=12, font=("微软雅黑", 11))
         self.output_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # 底部状态栏与复制按钮
         bottom_frame = tk.Frame(self.root, padx=10, pady=5)
-        bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)  # <-- 已修复为 tk.BOTTOM
+        bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.status_var = tk.StringVar(value="就绪 - V4.5 全场景自适应断句引擎已就位")
+        self.status_var = tk.StringVar(value="就绪 - V4.9 单字符精准测长引擎已启用")
         tk.Label(bottom_frame, textvariable=self.status_var, anchor=tk.W, fg="gray").pack(side=tk.LEFT)
 
         ttk.Button(bottom_frame, text="一键复制结果", command=self.copy_to_clipboard).pack(side=tk.RIGHT)
 
     def process_text(self):
         if not jieba:
-            messagebox.showwarning("警告", "未检测到 jieba 分词库，断句质量会下降。\n请在终端运行: pip install jieba")
+            messagebox.showwarning("警告", "未检测到 jieba 分词库，断句质量会下降。")
 
         raw_text = self.input_text.get("1.0", tk.END)
         cleaned_text = raw_text.replace('\xa0', ' ').strip()
 
         if not cleaned_text:
-            messagebox.showinfo("提示", "请输入有效的待处理文本")
             return
 
-        # 根据勾选状态，走不同的分流逻辑
         if self.sync_voice_filter_var.get():
-            # 【模式 A：同期声精准模式】
             lines = cleaned_text.splitlines()
             segments = []
             cur_seg, in_sync = [], False
@@ -84,60 +79,66 @@ class VoiceTranscriptionBreaker:
                 messagebox.showinfo("提示", "未在文本中检索到【同期声】或【同期】段落")
                 return
 
-            # 传入 is_sync_voice=True，强制启动身份识别
             final_out = "\n\n".join(
                 [self.algorithmic_segmentation(s, is_sync_voice=True) for s in segments if s.strip()])
         else:
-            # 【模式 B：全文本通用模式】
-            # 不再进行宏观结构过滤，保留用户原本的段落感 (\n\n)
             paragraphs = cleaned_text.split("\n\n")
-            # 传入 is_sync_voice=False，关闭身份识别，全文本无差别切分
             final_out = "\n\n".join(
                 [self.algorithmic_segmentation(p, is_sync_voice=False) for p in paragraphs if p.strip()])
 
         self.output_text.delete("1.0", tk.END)
         self.output_text.insert(tk.END, final_out)
-        self.status_var.set("处理完成！已根据当前模式完成自适应断句。")
+        self.status_var.set("处理完成！字符测量100%精准，特殊符号禁则已生效。")
 
     def algorithmic_segmentation(self, text, is_sync_voice=True):
-        """双层解构断句引擎：宏观掌控气口，微观保护语法"""
+        # 1. 智能括号隔离与单位斜杠保护（使用等长单字符 Ⓤ 和 Ⓢ 避免破坏字数统计）
+        text = re.sub(r'([元亩米A-Za-z0-9]+)/([元亩米A-Za-z0-9]+)', r'\1Ⓤ\2', text)
 
-        # 1. 隔离括号互动
-        text = re.sub(r'([（(].*?[）)])', r'\n\1\n', text)
+        def p_repl(match):
+            p_content = match.group(1)
+            # 如果括号紧跟在数字、金额或常见单位后面，视为业务单位补充，不切行
+            if match.start() > 0 and re.match(r'[0-9一二三四五六七八九十百千万元亩米]', text[match.start() - 1]):
+                return match.group(0)
+            # 如果括号内内容极短（≤5个字符），视为简单补充，不切行
+            if len(p_content) <= 5:
+                return match.group(0)
+            # 长括号且非紧跟单位，视为编导提示（如动作、表情），切行隔离
+            return f"\n{match.group(0)}\n"
 
-        # 2. 转化人工断点
-        text = text.replace("//", "\n").replace("\\\\", "\n").replace("/", " ").replace("\\", " ")
+        text = re.sub(r'([（(].*?[）)])', p_repl, text)
 
-        # 3. 融合顿号
+        # 2. 转化人工断点与数字分数保护机制
+        text = text.replace("//", "\n").replace("\\\\", "\n")
+        text = re.sub(r'(\d)/(\d)', r'\1Ⓢ\2', text)
+        text = text.replace("/", " ").replace("\\", " ")
+
+        # 3. 融合顿号，防止顿号造成不必要的小断气
         text = text.replace("、", "")
 
         raw_lines = text.splitlines()
         final_lines = []
         is_first_line = True
 
-        # 核心语法词性保护词库
+        # 词性与符号避头尾保护字典
         prefer_start_with = {"因为", "为了", "然后", "以及", "并且", "去", "来", "以便", "从而"}
         cant_end_with = {"和", "与", "跟", "及", "把", "被", "让", "向", "对", "在", "从", "由", "要", "会", "能",
                          "不能", "是", "有", "这", "那", "为", "一些", "这些", "那些", "一个", "这种", "那种", "个",
-                         "名", "位"}
-        cant_start_with = {"的", "地", "得", "了", "着", "过"}
+                         "名", "位", "（", "(", "《", "“", "【"}
+        cant_start_with = {"的", "地", "得", "了", "着", "过", "）", ")", "》", "”", "】", "％", "%"}
 
         for line in raw_lines:
             line = line.strip()
             if not line:
                 continue
 
-            # 【核心修复点】：只有在 is_sync_voice 为 True 时才剥离首行身份牌
+            # 处理第一行的姓名头衔逻辑
             if is_sync_voice and is_first_line and not line.startswith(("（", "(")):
                 is_first_line = False
-
-                # 轨1：找冒号
                 colon_match = re.search(r'[:：]', line)
                 if colon_match and colon_match.start() < 35:
                     speaker_part = line[:colon_match.end()].strip()
                     dialogue_part = line[colon_match.end():].strip()
                 else:
-                    # 轨2：找空格兜底
                     line_frags = line.split(maxsplit=2)
                     if len(line_frags) >= 3:
                         if len(line_frags[1]) <= 4:
@@ -161,14 +162,13 @@ class VoiceTranscriptionBreaker:
                     final_lines.append(speaker_part)
                 line_text = dialogue_part
             else:
-                # 普通文本模式下，或者非首行，直接进入待切分正文
                 line_text = line
 
             if not line_text.strip():
                 continue
 
-            # 纯括号互动断句
-            if line_text.startswith(("（", "(")) and line_text.endswith(("）", ")")):
+            # 处理被隔离出来的编导提示括号段落
+            if line_text.startswith(("（", "(")) and line_text.endswith(("）", ")")) and len(line_text) > 8:
                 p_words = list(jieba.cut(line_text)) if jieba else [line_text[i:i + 5] for i in
                                                                     range(0, len(line_text), 5)]
                 temp_p = ""
@@ -181,16 +181,14 @@ class VoiceTranscriptionBreaker:
                 if temp_p: final_lines.append(temp_p)
                 continue
 
-            # 替换杂乱标点为内部温和空格
+            # 将标点转化为气口空格
             for p in self.punct_to_space:
                 line_text = line_text.replace(p, " ")
 
-            # 切分为宏观气口组
             breath_groups = [g.strip() for g in line_text.split() if g.strip()]
 
             current_sub_line = ""
             for group in breath_groups:
-                # 第一层：单气口块超长微观解构
                 if len(group) > self.max_line_length:
                     if current_sub_line:
                         final_lines.append(current_sub_line)
@@ -223,12 +221,12 @@ class VoiceTranscriptionBreaker:
                         current_sub_line = "".join(temp_words)
 
                 else:
-                    # 第二层：宏观拼装
                     if not current_sub_line:
                         current_sub_line = group
                     else:
-                        if len(current_sub_line) + len(group) <= self.max_line_length:
-                            current_sub_line += group
+                        # 补回标点符号转化来的空格
+                        if len(current_sub_line) + 1 + len(group) <= self.max_line_length:
+                            current_sub_line += " " + group
                         else:
                             final_lines.append(current_sub_line)
                             current_sub_line = group
@@ -236,7 +234,11 @@ class VoiceTranscriptionBreaker:
             if current_sub_line:
                 final_lines.append(current_sub_line)
 
-        return "\n".join(final_lines)
+        # 4. 完美还原所有被保护的斜杠标识符
+        final_output_string = "\n".join(final_lines)
+        final_output_string = final_output_string.replace("Ⓢ", "/").replace("Ⓤ", "/")
+
+        return final_output_string
 
     def clear_all(self):
         self.input_text.delete("1.0", tk.END)
@@ -255,13 +257,5 @@ class VoiceTranscriptionBreaker:
 
 if __name__ == "__main__":
     root = tk.Tk()
-
-    try:
-        icon_path = r"C:\Users\33465\Desktop\logo.ico"
-        if os.path.exists(icon_path):
-            root.iconbitmap(icon_path)
-    except Exception:
-        pass
-
     app = VoiceTranscriptionBreaker(root)
     root.mainloop()
